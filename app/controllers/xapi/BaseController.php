@@ -1,6 +1,8 @@
 <?php namespace Controllers\xAPI;
 
 use Illuminate\Routing\Controller;
+use Illuminate\Http\Response as Response;
+use Illuminate\Http\JsonResponse as JsonResponse;
 use Controllers\API\BaseController as APIBaseController;
 use \app\locker\helpers\FailedPrecondition as FailedPrecondition;
 use \app\locker\helpers\Conflict as Conflict;
@@ -25,27 +27,60 @@ class BaseController extends APIBaseController {
     $this->getLrs();
   }
 
+  private function addCORSOptions($response) {
+    if (in_array('Illuminate\Http\ResponseTrait', class_uses($response))) {
+      $origin = isset($_SERVER['HTTP_ORIGIN']) ? $_SERVER['HTTP_ORIGIN'] : URL();
+
+      $response->header(
+        'Access-Control-Allow-Origin',
+        $origin,
+        false
+      );
+      $response->header(
+        'Access-Control-Allow-Methods',
+        'GET, PUT, POST, DELETE, OPTIONS',
+        false
+      );
+      $response->header(
+        'Access-Control-Allow-Headers',
+        'Origin, Content-Type, Accept, Authorization, X-Requested-With, X-Experience-API-Version, X-Experience-API-Consistent-Through, Updated',
+        false
+      );
+      $response->header(
+        'Access-Control-Allow-Credentials',
+        'true',
+        false
+      );
+    }
+
+    return $response;
+  }
+
   /**
    * Selects a method to be called.
    * @return mixed Result of the method.
    */
   public function selectMethod() {
+    $response = null;
+
     try {
       switch ($this->method) {
         case 'HEAD':
-        case 'GET': return $this->get();
-        case 'PUT': return $this->update();
-        case 'POST': return $this->store();
-        case 'DELETE': return $this->destroy();
+        case 'GET': $response = $this->get(); break;
+        case 'PUT': $response = $this->update(); break;
+        case 'POST': $response = $this->store(); break;
+        case 'DELETE': $response = $this->destroy(); break;
       }
     } catch (ValidationException $e) {
-      return self::errorResponse($e, 400);
+      $response = self::errorResponse($e, 400);
     } catch (Conflict $e) {
-      return self::errorResponse($e, 409);
+      $response = self::errorResponse($e, 409);
     } catch (FailedPrecondition $e) {
-      return self::errorResponse($e, 412);
+      $response = self::errorResponse($e, 412);
     } catch (\Exception $e) {
-      return self::errorResponse($e, 400);
+      $response = self::errorResponse($e, 400);
+    } finally {
+      return $this->addCORSOptions($response);
     }
   }
 

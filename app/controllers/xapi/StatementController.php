@@ -132,11 +132,11 @@ class StatementController extends BaseController {
     }
 
     // Saves $statements with $attachments.
-    return $this->statement->create(
+    return \Response::json($this->statement->create(
       $statements,
       $this->lrs,
       $attachments
-    );
+    ), 200);
   }
 
   /**
