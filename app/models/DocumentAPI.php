@@ -24,8 +24,9 @@ class DocumentAPI extends Eloquent {
   private function putContent($content, $contentType) {
     switch ($contentType) {
       case 'application/json':
-        $this->setSha($this->content);
-        $this->overwriteContent(json_decode($content, true));
+        $encoded_content = gettype($this->content) === 'string' ? $this->content : json_encode($this->content)
+        $this->setSha($encoded_content);
+        $this->overwriteContent(json_decode($encoded_content, true));
         break;
       case 'text/plain':
         $this->setSha($content);
